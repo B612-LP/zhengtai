@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>什么是蓝本 · 数据采集蓝本解释</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2430; --line:#2d3748;
+    --text:#e6edf3; --dim:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --purple:#bc8cff; --red:#f85149; --cyan:#39c5cf;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.75; padding:48px 20px 80px;
+  }
+  .wrap{max-width:980px;margin:0 auto}
+  header{margin-bottom:48px}
+  .kicker{color:var(--cyan);font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+  h1{font-size:38px;font-weight:800;letter-spacing:-1px;margin-bottom:16px}
+  h1 em{font-style:normal;color:var(--accent)}
+  .lede{color:var(--dim);font-size:17px;max-width:760px}
+  .tag{display:inline-block;background:rgba(88,166,255,.12);color:var(--accent);
+       border:1px solid rgba(88,166,255,.35);border-radius:20px;padding:2px 12px;font-size:13px;margin:0 6px 6px 0}
+
+  h2{font-size:24px;margin:56px 0 20px;padding-left:14px;border-left:4px solid var(--accent)}
+  h2 .sub{font-size:14px;color:var(--dim);font-weight:400;margin-left:10px}
+  p{color:#c9d1d9;margin-bottom:12px}
+  .muted{color:var(--dim)}
+
+  /* 类比卡片 */
+  .analogy{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0 8px}
+  .ana-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+  .ana-card .label{font-size:13px;color:var(--dim);margin-bottom:8px}
+  .ana-card .big{font-size:19px;font-weight:700}
+  .ana-card .big .from{color:var(--dim)}
+  .ana-card .big .to{color:var(--green)}
+  .ana-card .note{color:var(--dim);font-size:14px;margin-top:8px}
+  @media(max-width:720px){.analogy{grid-template-columns:1fr} h1{font-size:30px}}
+
+  /* 问题卡片 */
+  .qgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .qcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;position:relative;transition:.2s}
+  .qcard:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .qcard .num{position:absolute;top:16px;right:18px;font-size:34px;font-weight:800;color:rgba(88,166,255,.15)}
+  .qcard h3{font-size:17px;margin-bottom:8px;color:var(--accent)}
+  .qcard p{font-size:14px;color:#c9d1d9;margin:0}
+  @media(max-width:720px){.qgrid{grid-template-columns:1fr}}
+
+  /* 表格 */
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14.5px}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:1px}
+  tr:hover td{background:rgba(88,166,255,.04)}
+  td .tick{color:var(--green);font-weight:700}
+  td .cross{color:var(--red);font-weight:700}
+
+  /* 模块卡片 */
+  .mods{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .mod{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;transition:.2s}
+  .mod:hover{border-color:var(--purple);transform:translateY(-2px)}
+  .mod .id{display:inline-flex;width:30px;height:30px;border-radius:8px;background:rgba(188,140,255,.15);
+           color:var(--purple);font-weight:800;align-items:center;justify-content:center;margin-bottom:12px;font-size:15px}
+  .mod h3{font-size:16px;margin-bottom:8px}
+  .mod p{font-size:14px;color:#c9d1d9;margin:0}
+  .mod .src{font-size:12.5px;color:var(--dim);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+  @media(max-width:720px){.mods{grid-template-columns:1fr}}
+
+  /* 链路 */
+  .chain{display:flex;align-items:stretch;gap:0;margin:24px 0;flex-wrap:wrap}
+  .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+        padding:18px 16px;text-align:center;position:relative}
+  .step .t{font-size:15px;font-weight:700;margin-bottom:6px}
+  .step .d{font-size:12.5px;color:var(--dim);line-height:1.5}
+  .step.s1 .t{color:var(--cyan)} .step.s2 .t{color:var(--amber)} .step.s3 .t{color:var(--green)}
+  .arrow{align-self:center;color:var(--dim);font-size:22px;padding:0 10px}
+
+  /* 好蓝本清单 */
+  .check{list-style:none}
+  .check li{padding:10px 0 10px 34px;position:relative;border-bottom:1px solid rgba(45,55,72,.5);font-size:15px}
+  .check li::before{content:"✓";position:absolute;left:6px;color:var(--green);font-weight:800}
+  .check li b{color:var(--text)}
+
+  /* 版本节奏 */
+  .timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+  .tl{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);
+      border-radius:12px;padding:18px 20px}
+  .tl .date{font-size:20px;font-weight:800;color:var(--accent)}
+  .tl .name{font-size:14px;color:var(--dim);margin:2px 0 8px}
+  .tl p{font-size:13.5px;margin:0}
+  @media(max-width:720px){.timeline{grid-template-columns:1fr}}
+
+  .callout{background:linear-gradient(135deg,rgba(88,166,255,.08),rgba(188,140,255,.06));
+           border:1px solid rgba(88,166,255,.25);border-radius:14px;padding:24px 26px;margin:20px 0}
+  .callout p{margin:0;font-size:16px}
+  .callout b{color:var(--accent)}
+
+  code{background:rgba(88,166,255,.12);color:#a5d6ff;padding:2px 7px;border-radius:5px;font-size:13.5px}
+  .foot{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">正大杯 · 数据采集蓝本</div>
+    <h1>「蓝本」到底是什么？</h1>
+    <p class="lede">
+      不是问卷、不是报告、更不是 PPT——是给整个调研数据打地基的<b>施工图纸</b>。
+      这份说明用一边解释一边对照的方式，把「数据采集蓝本」讲清楚。
+    </p>
+    <div style="margin-top:18px">
+      <span class="tag">给成员的说明</span>
+      <span class="tag">2026-10-20</span>
+      <span class="tag">ddl 10-27</span>
+    </div>
+  </header>
+
+  <h2>一句话定义<span class="sub">先给结论</span></h2>
+  <div class="callout">
+    <p><b>蓝本 = 规定「数据怎么来、记成什么样、谁来记、怎么用」的规范性文档。</b>
+    任何人都照着它就能采出同口径的数据，不需要再问一句“这个字段填什么”。</p>
+  </div>
+
+  <h2>为什么叫蓝本<span class="sub">跟建筑类比</span></h2>
+  <div class="analogy">
+    <div class="ana-card">
+      <div class="label">盖一栋楼</div>
+      <div class="big"><span class="from">建材</span> → <span class="to">图纸</span></div>
+      <div class="note">没有图纸直接上砖，各工种口径不一，最后墙歪了才知道。</div>
+    </div>
+    <div class="ana-card">
+      <div class="label">做一场调研</div>
+      <div class="big"><span class="from">问卷 / 观察 / 访谈</span> → <span class="to">蓝本</span></div>
+      <div class="note">各人各记一套，回来数据拼不上——蓝本就是统一口径的那张总图。</div>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:12px">
+    “蓝图”原指工程制图用的蓝晒副本，代表正式、统一、可照做的施工依据。取这个意思：
+    <b>蓝本是“正式版”的数据规范</b>，而问卷、观察表只是它下面的零件。
+  </p>
+
+  <h2>为什么非要有它<span class="sub">4 个具体问题</span></h2>
+  <div class="qgrid">
+    <div class="qcard">
+      <div class="num">01</div>
+      <h3>数据从哪来？</h3>
+      <p>多啦酱方案是观察＋问卷＋访谈，卢雨婷还要求加政府公开数据。三者谁负责、什么渠道、什么合法性边界——不写清楚就会「聊天记录收集法」。</p>
+    </div>
+    <div class="qcard">
+      <div class="num">02</div>
+      <h3>每张表记什么字段？</h3>
+      <p>空间清单已经定了 9 个字段。但问题是：<b>每个字段的取值是数字、选项还是文本？空着算不算缺失？</b>不定义，数据没法清洗。</p>
+    </div>
+    <div class="qcard">
+      <div class="num">03</div>
+      <h3>谁、在哪、什么时候记？</h3>
+      <p>同一条街，周六下午 3 点和周三上午 9 点入座率能差 3 倍。<b>时点、天气、节假日</b>这些控制变量不写进记录表，数据就互相打架。</p>
+    </div>
+    <div class="qcard">
+      <div class="num">04</div>
+      <h3>怎么支撑「数据→成因→决策」？</h3>
+      <p>这是卢雨婷最尖锐的意见：<b>只有描述没有成因，数据会失去价值。</b>蓝本要让每个字段都指向某一类成因，否则后期写不出归因。</p>
+    </div>
+  </div>
+
+  <h2>它和「问卷」差在哪<span class="sub">容易混</span></h2>
+  <table>
+    <thead>
+      <tr><th>维度</th><th>问卷 / 观察表</th><th>数据采集蓝本</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>是什么</td><td>具体一个工具</td><td>所有工具的<b>总规范</b></td></tr>
+      <tr><td>回答</td><td>“问什么”</td><td>“<span class="tick">为什么问、从哪来、怎么记、谁用</span>”</td></tr>
+      <tr><td>数量</td><td>一份</td><td>一套（问卷＋观察表＋访谈＋数据字典＋来源清单）</td></tr>
+      <tr><td>由谁写</td><td>组内任何人</td><td><span class="tick">技术支持线</span>（汽水）</td></tr>
+      <tr><td>失败的样子</td><td>题目问偏</td><td>数据回来<span class="cross">没法分析</span>，实验重做</td></tr>
+    </tbody>
+  </table>
+
+  <h2>蓝本里装什么<span class="sub">6 个模块</span></h2>
+  <div class="mods">
+    <div class="mod">
+      <div class="id">1</div>
+      <h3>空间清单 Schema</h3>
+      <p>原 9 字段 ＋ 卢雨婷要补的成因维度（运营权责、基建投入、氛围、业态配套、成本）如何映射到字段上。</p>
+      <div class="src">来自：多啦酱方案 · 卢雨婷五类成因</div>
+    </div>
+    <div class="mod">
+      <div class="id">2</div>
+      <h3>线下观察记录表</h3>
+      <p>主指标入座率（怎么算、算几人）、遮阴、空调；加上时点/天气/节假日等控制变量列。</p>
+      <div class="src">来自：多啦酱方案 · 需补控制变量</div>
+    </div>
+    <div class="mod">
+      <div class="id">3</div>
+      <h3>预调查问卷题项</h3>
+      <p>服务“不同职业/年龄怎么看待公共空间”，纯描述性统计用，题项与后面分群分析对应。</p>
+      <div class="src">来自：卢雨婷“描述性调查”</div>
+    </div>
+    <div class="mod">
+      <div class="id">4</div>
+      <h3>访谈提纲</h3>
+      <p>关键事件式提问（“上次你什么情况下没去那个空间？”），专门挖成因，不是问满意度。</p>
+      <div class="src">来自：多啦酱方案 · 卢雨婷“挖为什么”</div>
+    </div>
+    <div class="mod">
+      <div class="id">5</div>
+      <h3>客观数据源清单</h3>
+      <p>政府公开数据：公园绿地面积、基建投入、街道权责文件。补上“不只看市民主观体验”这一层。</p>
+      <div class="src">来自：卢雨婷的尖锐意见</div>
+    </div>
+    <div class="mod">
+      <div class="id">6</div>
+      <h3>数据→成因→落地链路图</h3>
+      <p>采集与可视化 → AI 归因 → B/G/C 端交付，一张图说清数据最后流向哪里。</p>
+      <div class="src">来自：卢雨婷·正大杯逻辑链</div>
+    </div>
+  </div>
+
+  <h2>它撑起的那条链<span class="sub">正大杯官方逻辑</span></h2>
+  <p class="muted">卢雨婷对整份比赛逻辑的概括——蓝本负责把这条链的<b>第一环</b>做扎实：</p>
+  <div class="chain">
+    <div class="step s1"><div class="t">提出假设</div><div class="d">现象：青年非消费性停留需求 vs 公共空间供给错配</div></div>
+    <div class="arrow">→</div>
+    <div class="step s1"><div class="t">采集数据</div><div class="d">蓝本管这一段：观察 / 问卷 / 访谈 / 公开数据</div></div>
+    <div class="arrow">→</div>
+    <div class="step s2"><div class="t">成因分析</div><div class="d">五类成因：运营管理、基建债务、空间规划、需求错配、成本</div></div>
+    <div class="arrow">→</div>
+    <div class="step s3"><div class="t">制定决策</div><div class="d">B 端运营 / G 端反馈书 / C 端赞助</div></div>
+  </div>
+  <p class="muted" style="margin-top:10px">
+    注意：蓝本不写结论、不写分析——它保证的是<b>“数据进来时，每个格子的含义唯一且可追溯”</b>，
+    让分析阶段不会出现“这个字段当时记的是啥？”的返工。
+  </p>
+
+  <h2>好蓝本长什么样<span class="sub">验收标准</span></h2>
+  <ul class="check">
+    <li><b>唯一解释</b>：任意字段，别人照着一看就知道填什么，不用问你。</li>
+    <li><b>与成因挂钩</b>：每个采集项后面注明它能支撑哪条成因假设。</li>
+    <li><b>可追溯</b>：数据源头（哪个平台/哪份文件/哪次观察）有记录。</li>
+    <li><b>分群可拆</b>：职业、年龄、学生/职场这些维度在采集阶段就留好。</li>
+    <li><b>能拆成执行任务</b>：模块 1–6 可以分别拆给不同人并行干。</li>
+  </ul>
+
+  <h2>什么时候要交<span class="sub">版本节奏</span></h2>
+  <div class="timeline">
+    <div class="tl">
+      <div class="date">10-24</div>
+      <div class="name">v1 初稿</div>
+      <p>6 模块齐备，先按公共空间方案当前共识写，未定事项标 A/B 选项。</p>
+    </div>
+    <div class="tl">
+      <div class="date">10-26</div>
+      <div class="name">v2 修订</div>
+      <p>汇合多啦酱的折中融合方案与卢雨婷想法，调口径、定选项。</p>
+    </div>
+    <div class="tl">
+      <div class="date">10-27</div>
+      <div class="name">会前定稿</div>
+      <p>下午 14:00 会议材料，会上过一遍，定下执行分工。</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    文件：<code>选题/汽水-数据采集蓝本/蓝本是什么.html</code> · 配套任务清单 <code>task.md</code> ·
+    依据 2026-10-20 群通知与两份成员文档。
+  </div>
+
+</div>
+</body>
+</html>
