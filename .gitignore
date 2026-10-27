@@ -1,5 +1,4 @@
 .DS_Store
-原稿/
 __pycache__/
 *.pyc
 .venv/
