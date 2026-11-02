@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>防晒霜信息信任 · 数据看板（演练版）</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1c2330; --muted:#68738a;
+  --line:#e4e8ef; --accent:#0f6f5c; --accent2:#b7791f; --danger:#b3423a;
+  --bar:#0f6f5c; --bar2:#8aa89f; --chipbg:#e8f2ef; --warnbg:#fdf3e4; --warnline:#e7c98f;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#14171d; --card:#1d222b; --ink:#e8ecf2; --muted:#9aa5b8;
+    --line:#2c3340; --accent:#5fc4ab; --accent2:#d9a04a; --danger:#e08a82;
+    --bar:#5fc4ab; --bar2:#55636f; --chipbg:#1c2b27; --warnbg:#2b241a; --warnline:#6e5a33; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);padding:28px 18px 60px;max-width:1080px;margin:0 auto}
+h1{font-size:22px;margin-bottom:4px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+.chips{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap}
+.chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--chipbg);color:var(--accent);border:1px solid var(--line)}
+.chip.warn{background:var(--warnbg);color:var(--accent2);border-color:var(--warnline)}
+h2{font-size:16px;margin:26px 0 12px;padding-left:10px;border-left:4px solid var(--accent)}
+h2 .tag{font-size:11px;font-weight:normal;color:var(--muted);margin-left:8px}
+h2.sim{border-color:var(--accent2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi{font-size:26px;font-weight:700;letter-spacing:.5px}
+.kpi small{font-size:12px;font-weight:normal;color:var(--muted)}
+.label{font-size:12px;color:var(--muted);margin-top:2px}
+.rows{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
+.row .name{width:76px;color:var(--muted);flex:none}
+.row .track{flex:1;height:14px;background:var(--line);border-radius:7px;overflow:hidden}
+.row .fill{height:100%;background:var(--bar);border-radius:7px}
+.row.sim-fill .fill{background:var(--accent2)}
+.row .val{width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
+.warnbox{background:var(--warnbg);border:1px solid var(--warnline);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--ink);margin-bottom:16px;line-height:1.7}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card);border-radius:12px;overflow:hidden}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:center}
+th{background:var(--chipbg);color:var(--muted);font-weight:600}
+footer{margin-top:34px;font-size:12px;color:var(--muted);line-height:1.8;border-top:1px solid var(--line);padding-top:14px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<h1>防晒霜：审美焦虑与消费信息信任 · 数据看板</h1>
+<div class="sub">全流程演练成果 · 2026-10-30 · 正大杯第十七届（本科组）演练项目</div>
+<div class="chips">
+  <span class="chip">✅ 供给侧：真实公开数据（苏宁，n=119）</span>
+  <span class="chip warn">⚠️ 需求侧：模拟演示数据（n=385，非真实调查）</span>
+</div>
+
+<h2>供给侧 · 价格与渠道 <span class="tag">真实数据</span></h2>
+<div class="grid">
+  <div class="card"><div class="kpi">119</div><div class="label">商品数（去重后，价格覆盖 119/119）</div></div>
+  <div class="card"><div class="kpi">¥99.9</div><div class="label">价格中位数（均值 ¥128.7，右偏）</div></div>
+  <div class="card"><div class="kpi">¥9.9–489</div><div class="label">价格区间（四分位 ¥59.0–178.5）</div></div>
+  <div class="card"><div class="kpi">33%</div><div class="label">到手价占比（39/119，促销双口径）</div></div>
+</div>
+<div style="height:12px"></div>
+<div class="rows">
+  <div class="row"><span class="name">0–50 元</span><div class="track"><div class="fill" style="width:23%"></div></div><span class="val">27 款</span></div>
+  <div class="row"><span class="name">50–100</span><div class="track"><div class="fill" style="width:28%"></div></div><span class="val">33 款</span></div>
+  <div class="row"><span class="name">100–200</span><div class="track"><div class="fill" style="width:28%"></div></div><span class="val">33 款</span></div>
+  <div class="row"><span class="name">200+</span><div class="track"><div class="fill" style="width:22%"></div></div><span class="val">26 款</span></div>
+  <div class="note">价格带四分均匀分布，低价端由小样/组合装支撑。</div>
+</div>
+<div style="height:12px"></div>
+<div class="rows">
+  <div class="row"><span class="name">苏宁自营</span><div class="track"><div class="fill" style="width:45%"></div></div><span class="val">54 款</span></div>
+  <div class="row"><span class="name">海外专营</span><div class="track"><div class="fill" style="width:27%"></div></div><span class="val">32 款</span></div>
+  <div class="row"><span class="name">专营店</span><div class="track"><div class="fill" style="width:25%"></div></div><span class="val">30 款</span></div>
+  <div class="row"><span class="name">品牌旗舰</span><div class="track"><div class="fill" style="width:3%"></div></div><span class="val">3 款</span></div>
+</div>
+<div style="height:12px"></div>
+<table>
+  <tr><th>价格带 × 店铺类型</th><th>专营店</th><th>品牌旗舰</th><th>海外专营</th><th>苏宁自营</th></tr>
+  <tr><td>0–50 元</td><td>10</td><td>3</td><td><b>0</b></td><td>14</td></tr>
+  <tr><td>50–100 元</td><td>14</td><td>0</td><td>5</td><td>14</td></tr>
+  <tr><td>100–200 元</td><td>6</td><td>0</td><td>10</td><td>17</td></tr>
+  <tr><td>200+ 元</td><td><b>0</b></td><td>0</td><td><b>17</b></td><td>9</td></tr>
+</table>
+<div class="note">χ²=47.5（df=9），<b>Cramér's V=0.365</b> 中等偏强关联：海外专营店垄断 200+ 价位带（17/26），国内专营店全部在 100 元以下——<b>渠道选择本身就是价格信号</b>。</div>
+
+<h2>供给侧 · 宣称结构 <span class="tag">真实数据</span></h2>
+<div class="rows">
+  <div class="row"><span class="name">隔离</span><div class="track"><div class="fill" style="width:58%"></div></div><span class="val">69 款</span></div>
+  <div class="row"><span class="name">清爽</span><div class="track"><div class="fill" style="width:24%"></div></div><span class="val">28 款</span></div>
+  <div class="row"><span class="name">防水</span><div class="track"><div class="fill" style="width:14%"></div></div><span class="val">17 款</span></div>
+  <div class="row"><span class="name">美白</span><div class="track"><div class="fill" style="width:11%"></div></div><span class="val">13 款</span></div>
+  <div class="row"><span class="name">敏感肌</span><div class="track"><div class="fill" style="width:9%"></div></div><span class="val">11 款</span></div>
+  <div class="row"><span class="name">补水</span><div class="track"><div class="fill" style="width:8%"></div></div><span class="val">10 款</span></div>
+  <div class="row"><span class="name">男</span><div class="track"><div class="fill" style="width:7%"></div></div><span class="val">8 款</span></div>
+  <div class="row"><span class="name">儿童</span><div class="track"><div class="fill" style="width:5%"></div></div><span class="val">6 款</span></div>
+  <div class="row"><span class="name">抗老</span><div class="track"></div><span class="val">0 款</span></div>
+</div>
+<div class="note">SPF50 系宣称 45%（54/119），PA++++ 仅 8%（10/119）——防护参数高度同质，差异化挤在肤感/场景话术；标题层"抗老"宣称为零，焦虑话术主要在社媒种草层（新命题，支持 H2 问卷设计的针对性）。价格 × 评价数 Spearman ρ=−0.156：热度≠品质。</div>
+
+<h2 class="sim">需求侧 · 信任结构 <span class="tag">⚠️ 模拟演示数据 n=385</span></h2>
+<div class="warnbox">⚠️ <b>本区全部数字为模拟演示数据</b>（生成器：<a>数据/模拟问卷-仅流程演示/gen_survey_sim.py</a>，种子 42），仅演示分析链路，<b>不得引用为调查发现</b>。真人问卷 2026-11-08 起回收，届时整区替换为真实结果。</div>
+<div class="grid">
+  <div class="card"><div class="kpi">未支持</div><div class="label">H1 态度—行为缺口：参数信任 3.14 vs 社媒使用 2.61（t=9.86，方向相反——分析不必然验证假设）</div></div>
+  <div class="card"><div class="kpi">r=0.352</div><div class="label">H2 焦虑 ↔ 社媒信任（支持）</div></div>
+  <div class="card"><div class="kpi">r=0.485</div><div class="label">H3 理解门槛 ↔ 参数信任（支持）</div></div>
+  <div class="card"><div class="kpi">3.00→4.29</div><div class="label">H4 价格 ¥89/159/259 → 品质感知单调上升（支持）</div></div>
+</div>
+<div style="height:12px"></div>
+<div class="rows">
+  <div class="row sim-fill"><span class="name">参数型</span><div class="track"><div class="fill" style="width:36%"></div></div><span class="val">140 人</span></div>
+  <div class="row sim-fill"><span class="name">氛围型</span><div class="track"><div class="fill" style="width:39%"></div></div><span class="val">149 人</span></div>
+  <div class="row sim-fill"><span class="name">低卷入</span><div class="track"><div class="fill" style="width:25%"></div></div><span class="val">96 人</span></div>
+</div>
+<div class="note">k-means（k=3，三维信任标准化）三类人群画像；量表 Cronbach α=0.911–0.942（模拟题项使然，真数据不会这么高）。正式数据回来可直接复用分析脚本。</div>
+
+<footer>
+  数据来源：苏宁搜索页"防晒霜"（2026-10-30，浏览器渲染采集，接口被拒留痕）｜清洗与分析脚本随数据归档可复跑｜<br>
+  真实度声明：供给侧＝真实公开数据；需求侧＝模拟演示数据（已标注隔离）；AI 不生成问卷回答（正式期红线）｜<br>
+  项目文件：选题/防晒霜-审美焦虑与消费信息信任/（00 方案 · 06 问卷 · 07 报告 · 本看板）
+</footer>
+</body>
+</html>

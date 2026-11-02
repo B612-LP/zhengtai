@@ -1,0 +1,46 @@
+{
+ "n": 385,
+ "H1": {
+  "param_trust_mean": 3.14,
+  "social_use_mean": 2.61,
+  "param_use_mean": 3.48,
+  "paired_t_param_vs_social_use": 9.86
+ },
+ "H2_r_anxiety_social": 0.352,
+ "H3_r_understanding_param": 0.485,
+ "H4": {
+  "89": 2.99,
+  "159": 3.52,
+  "259": 4.29
+ },
+ "alpha": {
+  "param": 0.911,
+  "social": 0.927,
+  "ad": 0.93,
+  "anxiety": 0.942
+ },
+ "kmeans3": {
+  "sizes": [
+   149,
+   140,
+   96
+  ],
+  "centroids": [
+   [
+    3.3,
+    3.61,
+    3.83
+   ],
+   [
+    3.59,
+    2.56,
+    2.64
+   ],
+   [
+    2.25,
+    2.94,
+    2.92
+   ]
+  ]
+ }
+}
