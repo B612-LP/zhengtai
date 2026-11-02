@@ -1,0 +1,14 @@
+{
+  "slides": 14,
+  "native_shapes": 280,
+  "full_slide_images": 0,
+  "notes_slides": 14,
+  "csv_rows": 119,
+  "unique_product_ids": 119,
+  "csv_json_crosscheck": "passed",
+  "expected_lt5": 4,
+  "min_expected": 0.655,
+  "offline_html": true,
+  "browser_visual_check": "not run; lead responsible",
+  "office_visual_check": "not run; lead responsible"
+}

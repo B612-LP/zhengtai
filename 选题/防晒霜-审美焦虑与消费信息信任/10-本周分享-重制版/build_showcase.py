@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+"""从真实 CSV/JSON 构建离线展示与可编辑 PPTX；只写本目录。"""
+from pathlib import Path
+import csv, json, math, statistics, zipfile, html
+from collections import Counter
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
+
+HERE=Path(__file__).resolve().parent
+ROOT=HERE.parent
+SRC=ROOT/'数据/正式采集01-2026-10-30'
+rows=list(csv.DictReader((SRC/'products_clean.csv').open(encoding='utf-8-sig')))
+stat=json.loads((SRC/'stats_real.json').read_text())
+prices=[float(r['price_cny']) for r in rows]
+bands=['0-50','50-100','100-200','200+']
+labels=['≤50元','50–100元','100–200元','>200元']
+shops=['苏宁自营','海外专营','专营店','品牌旗舰']
+counts=Counter(r['price_band'] for r in rows)
+assert len(rows)==119==stat['n']
+assert len({r['product_id'] for r in rows})==119
+assert dict(counts)==stat['bands']
+assert round(statistics.median(prices),1)==stat['price_median']
+matrix=[[sum(r['price_band']==b and r['shop_type']==s for r in rows) for s in shops] for b in bands]
+for i,b in enumerate(bands):
+    for j,s in enumerate(shops): assert matrix[i][j]==stat['cross_band_shop']['table'][b][s]
+claims=Counter({k:sum(int(r['claim_'+k]) for r in rows) for k in stat['claims']})
+assert dict(claims)==stat['claims']
+expected=[sum(row)*sum(matrix[i][j] for i in range(4))/119 for row in matrix for j in range(4)]
+D={'n':119,'source':'苏宁「防晒霜」单次搜索快照 · 2026-10-30','bands':labels,'band_counts':[counts[b] for b in bands], 'shops':shops,'matrix':matrix,'claims':dict(claims.most_common()),'median':stat['price_median'],'mean':stat['price_mean'],'min':min(prices),'max':max(prices),'q25':stat['price_q25'],'q75':stat['price_q75'],'price_types':dict(Counter(r['price_type'] for r in rows)),'spf50':stat['spf50'],'pa4':stat['pa4'],'expected_lt5':sum(v<5 for v in expected),'min_expected':round(min(expected),3),'provenance':{'csv':'../数据/正式采集01-2026-10-30/products_clean.csv','json':'../数据/正式采集01-2026-10-30/stats_real.json','report':'../07-分析报告v1.md','plan':'../00-全流程方案与执行计划.md'},'scope':'119条去重商品链接，不是119个品牌或市场总体；统计只描述本次快照。'}
+S=[]
+def page(k,tag,title,sub='',items=None,notes='',source='研究设计 / 本周复盘，AI辅助起草，待人工审核'):
+    S.append(dict(kind=k,tag=tag,title=title,sub=sub,items=items or [],notes=notes,source=source))
+page('cover','防晒实验室 · 本周分享','买防晒，\n我们到底信什么？','先把「看见了什么」\n与「相信什么」分开。',notes='2分钟。开场请大家回想最近一次买防晒：先看SPF，还是先看品牌、价格、推荐？不现场统计为调查数据。今天不是证明消费者怎么想，而是交代证据到哪一步。')
+page('boundary','01 / 证据分层','119 是真实链接，\n385 只是模拟。','两组数字不能放进同一个结论。',[['119','真实供给侧','苏宁单次搜索快照去重商品链接；不是119个品牌，也不是市场全貌。'],['385','模拟演示','只测试清洗、分析、图表链路；不能支持或否定任何真实假设。'],['0','真人问卷回收','本展示尚无真实需求侧回收结果；不把计划写成完成。']],notes='2分钟。119来自真实公开商品信息，385来自模拟生成规则。0表示目前本展示没有可用于需求侧结论的真实回收结果，并非市场人数。')
+page('chain','02 / 研究链路','先看信息供给，\n再问人怎么选择。','已有证据与下一步，在链路上分开。',[['01','看见什么','商品标题 / 搜索价格','已采真实快照'],['02','如何理解','参数理解 / 信息信任','新问卷待审核'],['03','怎样选择','最近一次购买 / 选择情境','真实需求侧待回收'],['04','能否验证','核对题项 / 回收 / 再分析','不跳步下结论']],notes='1.5分钟。原方案核心问题保留，但先供给后需求。商品标题不能直接反推出消费者焦虑，更不能用相关性解释因果。')
+page('price','03 / 真实价格','价格分散，\n不等于品质分层。','搜索展示价，不是等容量单价。',notes='2分钟。先读中位数99.9，均值128.7高于中位数，分布向高价端拖尾。四档区间沿用原清洗口径：第一档0到50含50，其后右闭。39条到手价、80条标价，规格含小样与组合，不能把差价解释为品质差。',source='真实数据：products_clean.csv + stats_real.json；n=119；价格带右闭，200+实际为>200元')
+page('channel','04 / 渠道 × 价格','高价带海外专营较多，\n不是「垄断」。','每一条横带，分母都是该价格带的链接数。',notes='2分钟。大于200元一档，海外专营17/26=65.4%，苏宁自营还有9条。专营店100到200元仍有6条，绝非全在100以下。店铺类型是清洗分类，未独立核验。χ²47.5、V0.365仅描述这张表，16格中4格期望频数小于5，最小约0.655，不作总体显著性推断。',source='真实数据：products_clean.csv；各档n=27/33/33/26；店铺类型按原清洗分类')
+page('words','05 / 标题字面词频','标题里最多的，\n是「隔离」。','词频描述标题，不代表功效或购买动机。',notes='2分钟。词频多标签可重叠，百分比不加总到100%。隔离69/119；抗老0只说明字面没出现，不证明没有抗老营销，也无法定位到社媒层。SPF50系54/119，PA++++10/119，只是标题识别，不写不等于产品没有参数。',source='真实数据：products_clean.csv 标题规则字段；分母119条链接；多词可同时出现')
+page('limits','06 / 能回答 · 不能回答','一张搜索快照，\n不是消费者内心。','把结论收在证据覆盖的范围内。',[['能回答','这次搜索里，价格怎么分布？','不同店铺类型的价带构成如何？','标题里哪些字面词更常见？'],['不能回答','消费者究竟更信哪类信息？','商品功效、备案或宣传是否真实？','全市场份额、平台差异或因果关系？']],notes='1.5分钟。备案、评论正文、跨平台对照均未完成，登录和验证难点本轮不继续投入。没有这些证据，就删掉相应结论，而不是凭直觉补全。')
+page('simulation','07 / 模拟的正确位置','让代码跑通，\n别让假设「被证实」。','模拟结果是工具测试，不是研究发现。',[['H1','比较对象不一致','信任评分与使用频率跨构念，不能直接相减证明态度—行为缺口。'],['H2–H5','生成规则不等于现实','模拟相关、分群和检验，都不能支持或否定真实人群假设。'],['价格情境','先对齐题目与编码','模拟的三档价格与旧问卷设定不匹配；不能当作同一项实验分析。']],notes='2分钟。即使模拟结果有很漂亮的相关和信度，也只是生成规则的产物。不要重复旧报告支持/未支持的措辞。展示模拟的价值是检查代码接口、缺失处理与输出结构。')
+page('survey','08 / 问卷改进','把「更相信」\n问成可比较的问题。','新问卷候选版 v1.1：待人工审核，尚未发放。',[['同一把尺','同题干、同量尺比较参数 / 品牌 / 推荐信任。'],['真实行为','回忆最近一次购买，分开问“信任”与“实际使用”。'],['减少诱导','焦虑、理解、信任分开；不预设“营销一定制造焦虑”。'],['先预调研','先做少量认知访谈，再看缺失、作答时长与题意理解。']],notes='2分钟。这里只给新版设计原则，具体以另一位队友的06-问卷v1.1-预调研候选版为准，审核后才进入预调研。便利抽样达到385不保证95%置信度、正负5%误差；应交代招募路径与样本偏差。')
+page('workflow','09 / AI 用在交付过程','让 AI 加速，\n把审核留给人。','每一步留下能追查、能复跑的文件。',[['人的判断','研究问题 / 取舍 / 题项审核','最终确认'],['AI的工作','代码 / 清洗 / 图表 / 排版','候选产物'],['共同复核','原始值 → 统计 → 结论逐项核对','证据回查']],notes='1.5分钟。AI可以起草，但不能编造问卷回答、采集记录、已审核或已提交状态。本轮已经示范：清洗表和统计JSON互校，展示双格式同源生成。')
+page('loop','10 / 下一步最小闭环','先补一条真实需求链，\n不追难采的大而全。','本轮跳过难采项，不为完整感制造事实。',[['1','审核问卷','人工确认维度、题意、价格情境与编码一致。'],['2','少量试问','邀请真实对象认知访谈；记录听不懂、漏答与作答时长。'],['3','修订再回收','按可执行招募方案正式回收；真实结果替换模拟章节。']],notes='1.5分钟。这里是建议，不是已分工或已经完成。备案、评论正文和跨平台采集暂缓；难以拿到的数据不影响做这个最小闭环，但对应主张也必须放弃。')
+page('reuse','11 / 队友可复用','换一个选题，\n仍能带走这套方法。','复用结构，不复制结论。',[['证据卡','来源 / 时间 / 单位 / 分母 / 限制','写每一条发现前先填完整。'],['同源展示','一份CSV与JSON → 图表 → HTML / PPTX','改数据后重跑，不手改图上数字。'],['审稿顺序','先核数字 → 再核推断 → 最后看排版','先问“凭什么”，再问“好不好看”。']],notes='1.5分钟。请队友用自己的一个选题演示证据卡。共享的是方法、脚本、边界意识，而不是把119条商品或模拟画像迁移成别的课题结论。')
+page('recap','12 / 带走三句话','少一点「看起来完成」，\n多一点可验证。','研究质量，先由边界决定。',[['01','真实与模拟，始终分开。'],['02','标题与心理，不直接跨越。'],['03','图表与结论，沿来源回查。']],notes='1分钟。口头复盘三个边界：真实/模拟，供给/需求，描述/推断。主体约23分钟，随后讨论5分钟。若只有20分钟，可缩短03到05读图。')
+page('end','讨论 / 下一步由人拍板','如果只能再做一步，\n你会补哪条证据？','先选最能改变判断的那一步。',[['A','逐题审核新问卷'],['B','找真实对象试问'],['C','复核一次图表结论']],notes='讨论5分钟。三项均为可选动作，未预设队友分工。40分钟延展：增加价格规格可比性讨论4分钟、期望频数与抽样边界讲解3分钟、用一个队友选题填证据卡5分钟；主体23分钟+讨论5分钟+延展12分钟≈40分钟。')
+D['slides']=S
+(HERE/'source_data.json').write_text(json.dumps(D,ensure_ascii=False,indent=2),encoding='utf-8')
+
+# PPTX: all content is native text and editable shapes, no full-slide images.
+C={'bg':'F6F4EC','ink':'123E32','muted':'60746B','orange':'E7793E','line':'D9DFD3','pale':'E9EDE2','white':'FFFFFF','green2':'709482','green3':'B7CAB6'}
+P=Presentation(); P.slide_width=Inches(13.333); P.slide_height=Inches(7.5)
+def color(s): return RGBColor.from_string(C.get(s,s))
+def box(sl,x,y,w,h,fill='pale',radius=False):
+    sh=sl.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE if radius else MSO_SHAPE.RECTANGLE,Inches(x),Inches(y),Inches(w),Inches(h)); sh.fill.solid(); sh.fill.fore_color.rgb=color(fill); sh.line.fill.background(); return sh
+
+def text(sl,txt,x,y,w,h,size=22,fill='ink',bold=False):
+    sh=sl.shapes.add_textbox(Inches(x),Inches(y),Inches(w),Inches(h)); tf=sh.text_frame; tf.word_wrap=True; tf.margin_left=0;tf.margin_right=0;tf.margin_top=0;tf.margin_bottom=0
+    for i,line in enumerate(txt.split('\n')):
+        p=tf.paragraphs[0] if i==0 else tf.add_paragraph();p.text=line;p.font.name='PingFang SC';p.font.size=Pt(size);p.font.bold=bold;p.font.color.rgb=color(fill);p.space_after=Pt(6)
+    return sh
+
+def header(sl,s,i,dark=False):
+    bg='ink' if dark else 'bg'; ink='bg' if dark else 'ink';sl.background.fill.solid();sl.background.fill.fore_color.rgb=color(bg)
+    text(sl,s['tag'],.65,.32,11,.35,12,'orange',True)
+    text(sl,s['source'],.65,7.02,11.65,.24,10,'green3' if dark else 'muted')
+    text(sl,f'{i:02d} / 14',12.1,7.02,.7,.24,10,'green3' if dark else 'muted')
+    return ink
+
+def title(sl,s,size=34,w=11.9):
+    text(sl,s['title'],.65,.91,w,1.35,size,'ink',True)
+    text(sl,s['sub'],.68,2.35,11.9,.65,17,'muted')
+
+def bar(sl,x,y,w,h,v,maxv,fill='orange'):
+    box(sl,x,y,w,h,'pale');
+    if v:box(sl,x,y,w*v/maxv,h,fill)
+
+for i,s in enumerate(S,1):
+    sl=P.slides.add_slide(P.slide_layouts[6]);k=s['kind'];dark=k in ('cover','end');ink=header(sl,s,i,dark)
+    if k=='cover':
+        text(sl,s['title'],.75,1.55,9,2.2,48,'bg',True);text(sl,s['sub'],.78,4.28,7,1.4,25,'green3');text(sl,'真实数据 / 方法复盘 / 待审问卷',.8,6.25,9,.45,15,'bg')
+        box(sl,10.37,2.33,1.45,2.9,'bg',True);box(sl,10.67,1.93,.85,.45,'orange');box(sl,10.37,4.6,1.45,.45,'orange');text(sl,'SUN\nLAB',10.57,3.1,1.1,1.2,25,'ink',True)
+    elif k in ('price','channel','words'):
+        text(sl,s['title'],.65,.9,11.8,1.35,34,'ink',True);text(sl,s['sub'],.68,2.3,11.8,.55,17,'muted')
+        if k=='price':
+            text(sl,'99.9',.65,3.13,4.1,1.05,74,'ink',True);text(sl,'元 / 搜索价中位数',.7,4.3,4.2,.45,18,'muted');text(sl,'均值 ¥128.7\n范围 ¥9.9–489',.7,5.05,4.2,1.0,21,'ink')
+            for j,(label,v) in enumerate(zip(labels,D['band_counts'])):
+                y=3.1+j*.75;text(sl,label,5.0,y,1.6,.4,18);bar(sl,6.65,y+.04,4.75,.28,v,35);text(sl,f'{v}条',11.62,y-.03,1,.4,18)
+            text(sl,'到手价39条 / 标价80条；规格、容量与组合不同。',5,6.35,7.5,.4,15,'muted')
+        elif k=='channel':
+            cs=['ink','orange','green2','green3']
+            for j,(shop,c) in enumerate(zip(shops,cs)):box(sl,.7+j*3.1,2.98,.16,.16,c);text(sl,shop,.96+j*3.1,2.9,2.7,.4,15)
+            for j,(label,row) in enumerate(zip(labels,matrix)):
+                y=3.65+j*.58; text(sl,label,.7,y,1.65,.4,17);x=2.45
+                for v,c in zip(row,cs):
+                    w=8.8*v/sum(row)
+                    if v:box(sl,x,y,w,.36,c);text(sl,str(v),x+.06,y+.02,w,.3,13,'bg' if c in ('ink','orange','green2') else 'ink');x+=w
+                text(sl,f'n={sum(row)}',11.55,y,1,.4,15,'muted')
+            text(sl,'17 / 26 = 65.4%',.7,6.15,5,.5,26,'orange',True);text(sl,'>200元档中海外专营占比；其余9条为苏宁自营。',5.15,6.25,7.7,.4,15)
+            text(sl,'专营店100–200元仍有6条。χ²=47.5 / V=0.365仅描述；4/16格期望频数<5，不作总体推断。',.7,6.71,11.9,.22,10.5,'muted')
+        else:
+            pairs=list(D['claims'].items())[:6]
+            for j,(label,v) in enumerate(pairs):
+                y=3+j*.49;text(sl,label,.7,y,1.3,.35,17);bar(sl,2,y+.03,5.3,.23,v,70,'ink');text(sl,f'{v} / 119',7.52,y-.03,1.8,.4,16)
+            box(sl,9.55,3,3,2.95,'pale',True);text(sl,'0',9.85,3.2,2.3,.9,60,'orange',True);text(sl,'标题未出现「抗老」\n≠ 没有相关营销\n≠ 证据来自社媒',9.85,4.2,2.5,1.5,17)
+            text(sl,'标题识别：SPF50系54/119；PA++++ 10/119。未写 ≠ 没参数。',.7,6.35,11.8,.4,15,'muted')
+    elif k=='boundary':
+        title(sl,s)
+        for j,item in enumerate(s['items']):
+            x=.7+j*4.15;box(sl,x,3.2,3.93,3.35,'pale',True);text(sl,item[0],x+.22,3.35,3.45,1,65,'orange' if j==1 else 'ink',True);text(sl,item[1],x+.25,4.55,3.4,.45,23,'ink',True);text(sl,item[2],x+.25,5.15,3.4,1.15,17)
+    elif k=='chain':
+        title(sl,s)
+        for j,it in enumerate(s['items']):
+            x=.7+j*3.15;text(sl,it[0],x,3.15,2.8,.8,43,'orange',True);box(sl,x,4.1,2.8,.025,'line');text(sl,it[1],x,4.4,2.8,.55,24,'ink',True);text(sl,it[2],x,5.1,2.8,.8,17);text(sl,it[3],x,6.1,2.8,.4,14,'muted')
+    elif k=='limits':
+        title(sl,s)
+        for j,it in enumerate(s['items']):
+            x=.7+j*6.35;box(sl,x,3.2,6.1,3.2,'ink' if j==0 else 'pale',True);fc='bg' if j==0 else 'ink';text(sl,it[0],x+.3,3.48,5.5,.55,26,fc,True)
+            for q,t in enumerate(it[1:]):text(sl,'— '+t,x+.3,4.25+q*.61,5.5,.5,18,fc)
+    elif k in ('simulation','reuse','workflow'):
+        title(sl,s)
+        for j,it in enumerate(s['items']):
+            y=3.15+j*1.12;box(sl,.7,y+.04,.07,.83,'orange');text(sl,it[0],1,y,2.3,.7,22,'ink',True)
+            if k in ('workflow','reuse'):
+                # Give the central action column room; the right column is a short annotation.
+                middle=it[1].replace(' → ', '\n→ ', 1) if k=='reuse' and j==1 else it[1]
+                text(sl,middle,3.45,y,5.0,.95,19,'ink',True)
+                text(sl,it[2],8.8,y,3.6,1.0,17,'muted')
+            else:
+                # Simulation explanations need the wider right-hand column.
+                text(sl,it[1],3.45,y,3.6,.85,20,'ink',True)
+                text(sl,it[2],7.4,y,5.0,.95,17,'muted')
+    elif k=='survey':
+        title(sl,s)
+        for j,it in enumerate(s['items']):
+            x=.7+(j%2)*6.35;y=3.2+(j//2)*1.62;box(sl,x,y,6.05,1.38,'pale',True);text(sl,it[0],x+.22,y+.2,1.65,.6,22,'orange',True);text(sl,it[1],x+2,y+.22,3.8,1,18)
+        text(sl,'便利抽样n=385不保证95%置信度、±5%误差；需说明招募方式与偏差。',.7,6.5,11.9,.3,13,'muted')
+    elif k=='loop':
+        title(sl,s)
+        for j,it in enumerate(s['items']):
+            x=.7+j*4.18; text(sl,it[0],x,3.1,3.5,1.1,70,'orange',True);text(sl,it[1],x,4.5,3.8,.55,26,'ink',True);text(sl,it[2],x,5.25,3.6,1.2,19)
+        text(sl,'备案核验 / 评论正文 / 跨平台对照：均未完成，本轮暂缓，不补写对应结论。',.7,6.6,11.9,.3,13,'muted')
+    elif k=='recap':
+        text(sl,s['title'],.7,1.05,12,1.5,38,'ink',True);text(sl,s['sub'],.7,2.72,12,.6,20,'muted')
+        for j,it in enumerate(s['items']):text(sl,it[0],.7,3.8+j*.77,1.2,.6,29,'orange',True);text(sl,it[1],2.1,3.82+j*.77,10.1,.6,26,'ink',True)
+    elif k=='end':
+        text(sl,s['title'],.7,1.2,12,1.9,44,'bg',True);text(sl,s['sub'],.75,3.5,12,.6,23,'green3')
+        for j,it in enumerate(s['items']):
+            x=.75+j*4.15;box(sl,x,5.1,3.9,.025,'green2');text(sl,it[0],x,5.4,.65,.6,27,'orange',True);text(sl,it[1],x+.7,5.43,3.05,.65,20,'bg')
+    sl.notes_slide.notes_text_frame.text=s['notes']+'\n\n口径：'+s['source']+'\n主体约23分钟 + 讨论5分钟；40分钟版本延展点见末页。'
+P.save(HERE/'分享展示.pptx')
+
+HTML_HEAD='''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>防晒实验室｜本周分享重制版</title><style>
+:root{--bg:#f6f4ec;--ink:#123e32;--muted:#60746b;--orange:#d7652c;--line:#d9dfd3;--pale:#e9ede2;--white:#fff;--deep:#123e32;--cream:#f6f4ec;--g2:#709482;--g3:#b7cab6;--shadow:0 18px 60px #123e3210}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding:5rem}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.5}button{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:.5rem .95rem;cursor:pointer}button:hover{border-color:var(--orange)}:focus-visible{outline:3px solid var(--orange);outline-offset:4px}.toolbar{position:sticky;top:0;z-index:10;padding:.65rem max(2vw,1rem);display:flex;align-items:center;gap:.6rem;background:var(--bg);border-bottom:1px solid var(--line)}.brand{font-size:.8rem;letter-spacing:.15em;margin-right:auto;font-weight:700}.counter{font-size:.8rem;min-width:3rem}main{padding:2rem max(3vw,1rem) 5rem}.slide{max-width:1440px;min-height:760px;margin:0 auto 2.5rem;padding:3rem 4rem 2rem;position:relative;overflow:hidden;border:1px solid var(--line);border-radius:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column}.tag{color:var(--orange);font-size:.8rem;font-weight:750;letter-spacing:.16em}.slide h1{font-size:clamp(2.5rem,4.2vw,4.8rem);line-height:1.12;letter-spacing:-.055em;margin:2rem 0 1.2rem;white-space:pre-line}.sub{font-size:clamp(1rem,1.6vw,1.45rem);color:var(--muted);white-space:pre-line;margin:0 0 2rem}.content{flex:1;min-height:280px}.foot{border-top:1px solid var(--line);padding-top:1rem;margin-top:2rem;font-size:.72rem;color:var(--muted);display:flex;justify-content:space-between;gap:1rem}.dark{background:var(--deep);color:var(--cream);border:0}.dark .sub,.dark .foot{color:var(--g3)}.dark .foot{border-color:var(--g2)}.cover h1{font-size:clamp(3.1rem,5.4vw,6rem);max-width:75%}.cover .sub{font-size:clamp(1.3rem,2vw,2rem);margin-top:2rem}.bottle{position:absolute;right:10%;top:33%;width:13%;height:42%;border-radius:1rem 1rem 2rem 2rem;background:var(--cream);color:var(--deep);display:grid;place-content:center;font-weight:800;font-size:clamp(1.3rem,2.5vw,2.7rem);line-height:1.1;transform:rotate(8deg);box-shadow:1rem 1rem 0 #0002}.bottle:before{content:"";position:absolute;top:-12%;left:22%;width:56%;height:12%;background:var(--orange);border-radius:.3rem .3rem 0 0}.bottle:after{content:"";position:absolute;bottom:15%;width:100%;height:12%;background:var(--orange)}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem}.card{background:var(--pale);padding:1.8rem;border-radius:.7rem}.big{font-size:clamp(3.8rem,7vw,7rem);font-weight:750;line-height:1.1;letter-spacing:-.06em}.orange{color:var(--orange)}h2{font-size:1.5rem;line-height:1.3;margin:1rem 0}.card p{font-size:1.1rem;color:var(--muted);margin:.7rem 0 0}.chain{display:grid;grid-template-columns:repeat(4,1fr);gap:2rem}.chain .num{color:var(--orange);font-size:3rem}.chain h2{border-top:1px solid var(--line);padding-top:1rem}.pill{font-size:.85rem;color:var(--muted)}.price-layout{display:grid;grid-template-columns:1fr 1.7fr;gap:3rem;align-items:center}.measure p{color:var(--muted)}.measure .big{font-size:clamp(4.6rem,8vw,8rem)}.barrow{display:grid;grid-template-columns:6.5rem 1fr 4.4rem;gap:.9rem;align-items:center;margin:1rem 0}.track{height:1.2rem;background:var(--pale);border-radius:2px;overflow:hidden}.fill{height:100%;background:var(--orange)}.value{font-variant-numeric:tabular-nums}.caption{font-size:.88rem;color:var(--muted);margin-top:1.5rem}.legend{display:flex;gap:2rem;flex-wrap:wrap;font-size:.9rem}.swatch{display:inline-block;width:.7rem;height:.7rem;margin-right:.5rem}.stackrow{display:grid;grid-template-columns:7rem 1fr 3.2rem;gap:1rem;align-items:center;margin:1.2rem 0}.stack{display:flex;height:2rem}.seg{display:grid;place-items:center;color:var(--cream);font-size:.9rem;min-width:0}.seg:last-child{color:var(--deep)}.callout{display:flex;gap:2rem;align-items:center;margin-top:1.5rem}.callout strong{font-size:2rem;color:var(--orange)}.words-layout{display:grid;grid-template-columns:2fr 1fr;gap:3rem}.words-layout .barrow{margin:.65rem 0}.words-layout .fill{background:var(--ink)}.two{display:grid;grid-template-columns:1fr 1fr;gap:2rem}.yes{background:var(--deep);color:var(--cream)}.yes p{color:var(--cream)}.listline{display:grid;grid-template-columns:1.1fr 1.5fr 2.1fr;gap:2rem;padding:1.4rem 0;border-top:1px solid var(--line);align-items:start}.listline strong{font-size:1.25rem}.listline p{margin:0;color:var(--muted)}.grid4{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}.grid4 .card{display:grid;grid-template-columns:7rem 1fr;gap:1rem}.grid4 h2{margin:0;color:var(--orange)}.grid4 p{margin:0}.step .big{color:var(--orange);margin-bottom:1.7rem}.recapline{display:flex;gap:2rem;font-size:clamp(1.3rem,2.4vw,2.3rem);font-weight:650;margin:1.3rem 0}.recapline span{color:var(--orange)}.end .three{margin-top:2rem}.end .option{border-top:1px solid var(--g2);padding:1.5rem 0;font-size:1.2rem}.end .option b{color:var(--orange);font-size:2rem;margin-right:1rem}.notes{margin-top:1.3rem;color:var(--muted);font-size:.85rem}.notes summary{cursor:pointer;display:inline-block}.notes p{max-width:70rem}.dark .notes{color:var(--g3)}.progress{position:fixed;bottom:0;left:0;width:100%;height:4px;background:var(--line);z-index:20}.progress span{display:block;height:100%;width:7.14%;background:var(--orange)}body.presenting main{padding:0}body.presenting .slide{display:none;min-height:calc(100dvh - 65px);max-width:none;margin:0;border-radius:0;padding:2rem 4.5vw 1rem}body.presenting .slide.active{display:flex}body.presenting .notes{display:none}body.presenting h1{font-size:clamp(2.5rem,4vw,4.2rem);margin-top:1.1rem}body.presenting .cover h1{font-size:clamp(3.5rem,5vw,5.6rem)}body.presenting .content{min-height:0}body.presenting .foot{margin-top:1rem}body.presenting .sub{margin-bottom:1rem}body.presenting .big{font-size:clamp(3rem,6vw,6rem)}
+@media(prefers-color-scheme:dark){:root{--bg:#102b24;--ink:#edf1e6;--muted:#aec1b5;--orange:#ff9b62;--line:#385448;--pale:#1a3a30;--white:#102b24;--shadow:none}.yes{background:#23493b}.words-layout .fill{background:var(--g2)}}
+@media(max-width:700px){.toolbar{flex-wrap:wrap;gap:.35rem}.brand{flex-basis:100%;font-size:.7rem}.toolbar button{font-size:.8rem;padding:.4rem .7rem}main{padding:1rem .7rem 3rem}.slide{padding:1.5rem 1.2rem;min-height:auto;border-radius:.6rem;margin-bottom:1rem}.slide h1{font-size:2.45rem;letter-spacing:-.045em;margin:1.5rem 0 1rem}.sub{font-size:1rem}.content{min-height:0}.three,.chain,.price-layout,.words-layout,.two,.grid4{grid-template-columns:1fr;gap:1rem}.card{padding:1.3rem}.big{font-size:4rem}.bottle{right:10%;top:56%;width:17%;height:25%;opacity:.7}.cover{min-height:660px}.cover h1{max-width:100%;font-size:3.2rem}.cover .sub{max-width:70%}.chain{grid-template-columns:1fr 1fr;gap:1.5rem}.chain .num{font-size:2rem}.chain h2{font-size:1.2rem}.barrow{grid-template-columns:5.8rem 1fr 3.8rem;gap:.5rem;font-size:.9rem}.legend{gap:.75rem}.stackrow{grid-template-columns:5rem 1fr 2.2rem;gap:.4rem;font-size:.8rem}.seg{font-size:.75rem}.callout{display:block}.listline{grid-template-columns:1fr;gap:.55rem;padding:1.2rem 0}.grid4 .card{grid-template-columns:1fr}.foot{font-size:.65rem}.recapline{gap:1rem}.step .big{margin-bottom:.6rem}body.presenting .slide{overflow:auto;min-height:calc(100dvh - 100px);padding:1.5rem}body.presenting h1{font-size:2.4rem}body.presenting .cover h1{font-size:3rem}}
+@media print{*{print-color-adjust:exact;-webkit-print-color-adjust:exact}.toolbar,.progress,.notes{display:none!important}body{background:white;color:#123e32}main{padding:0!important}.slide,body.presenting .slide{display:flex!important;box-shadow:none;break-after:page;page-break-after:always;border:0;border-radius:0;min-height:180mm!important;margin:0!important;padding:12mm!important;overflow:visible}.slide:last-child{break-after:auto}.slide h1,body.presenting h1{font-size:30pt}.cover h1,body.presenting .cover h1{font-size:42pt}.sub{font-size:13pt}.content{min-height:0}.card{padding:1rem}.big,body.presenting .big{font-size:50pt}.foot{font-size:8pt}.three{gap:1rem}.listline{padding:1rem 0}.barrow{margin:.7rem 0}@page{size:A4 landscape;margin:5mm}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}</style></head><body><nav class="toolbar" aria-label="演示控制"><span class="brand">防晒实验室 / 本周复盘</span><span class="counter" aria-live="polite" id="counter">1 / 14</span><button id="prev" aria-label="上一页">上一页</button><button id="next" aria-label="下一页">下一页</button><button id="show">全屏演示</button><button id="print">打印 / 存为PDF</button></nav><main id="slides" aria-label="分享内容"></main><div class="progress" role="progressbar" aria-label="演示进度" aria-valuemin="1" aria-valuemax="14" aria-valuenow="1"><span></span></div>'''
+JS=r'''<script>
+const DATA=__DATA__;
+const $=s=>document.querySelector(s);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const colors=['var(--deep)','var(--orange)','var(--g2)','var(--g3)'];
+function bars(labels,vals,max=35){return labels.map((l,i)=>`<div class="barrow"><span>${esc(l)}</span><div class="track"><div class="fill" style="width:${vals[i]/max*100}%"></div></div><strong class="value">${vals[i]}</strong></div>`).join('')}
+function body(s){let a=s.items;switch(s.kind){
+case 'cover':return `<div class="bottle" aria-hidden="true">SUN<br>LAB</div><p class="caption">真实数据 / 方法复盘 / 待审问卷</p>`;
+case 'boundary':return `<div class="three">${a.map((x,i)=>`<article class="card"><div class="big ${i===1?'orange':''}">${esc(x[0])}</div><h2>${esc(x[1])}</h2><p>${esc(x[2])}</p></article>`).join('')}</div>`;
+case 'chain':return `<div class="chain">${a.map(x=>`<article><div class="num">${x[0]}</div><h2>${x[1]}</h2><p>${x[2]}</p><span class="pill">${x[3]}</span></article>`).join('')}</div>`;
+case 'price':return `<div class="price-layout"><div class="measure"><div class="big">${DATA.median}</div><p>元 / 搜索价中位数</p><h2>均值 ¥${DATA.mean}<br>范围 ¥${DATA.min}–${DATA.max}</h2></div><div role="img" aria-label="价格带链接数：50元及以下27，50到100元33，100到200元33，大于200元26">${bars(DATA.bands,DATA.band_counts)}<p class="caption">到手价39条 / 标价80条；规格、容量与组合不同。</p></div></div>`;
+case 'channel':return `<div class="legend">${DATA.shops.map((v,i)=>`<span><i class="swatch" style="background:${colors[i]}"></i>${v}</span>`).join('')}</div><div role="img" aria-label="各价带店铺构成，依次为苏宁自营、海外专营、专营店、品牌旗舰：27条中14/0/10/3；33条中14/5/14/0；33条中17/10/6/0；26条中9/17/0/0">${DATA.matrix.map((r,i)=>`<div class="stackrow"><span>${DATA.bands[i]}</span><div class="stack">${r.map((v,j)=>v?`<span class="seg" style="background:${colors[j]};width:${v/DATA.band_counts[i]*100}%">${v}</span>`:'').join('')}</div><span>${DATA.band_counts[i]}条</span></div>`).join('')}</div><div class="callout"><strong>17 / 26 = 65.4%</strong><span>>200元档的海外专营占比；其余9条为苏宁自营。</span></div><p class="caption">专营店100–200元仍有6条。χ²=47.5 / V=0.365仅描述；4/16格期望频数<5，最小约0.655，不作总体显著性推断。</p>`;
+case 'words':{let pairs=Object.entries(DATA.claims).slice(0,6);return `<div class="words-layout"><div role="img" aria-label="标题词频：隔离69，清爽28，防水17，美白13，敏感肌11，补水10，分母119">${bars(pairs.map(x=>x[0]),pairs.map(x=>x[1]),70)}<p class="caption">每个数字的分母均为119条链接；多词可重叠。</p></div><aside class="card"><div class="big orange">0</div><h2>标题未出现「抗老」</h2><p>≠ 没有相关营销<br>≠ 证据来自社媒</p></aside></div><p class="caption">标题识别：SPF50系54/119；PA++++ 10/119。未写 ≠ 没参数。</p>`;}
+case 'limits':return `<div class="two">${a.map((x,i)=>`<article class="card ${i===0?'yes':''}"><h2>${x[0]}</h2>${x.slice(1).map(t=>`<p>— ${t}</p>`).join('')}</article>`).join('')}</div>`;
+case 'simulation':case 'workflow':case 'reuse':return a.map(x=>`<article class="listline"><strong class="orange">${x[0]}</strong><strong>${x[1]}</strong><p>${x[2]}</p></article>`).join('');
+case 'survey':return `<div class="grid4">${a.map(x=>`<article class="card"><h2>${x[0]}</h2><p>${x[1]}</p></article>`).join('')}</div><p class="caption">便利抽样n=385不保证95%置信度、±5%误差；必须说明招募方式与偏差。</p>`;
+case 'loop':return `<div class="three">${a.map(x=>`<article class="step"><div class="big">${x[0]}</div><h2>${x[1]}</h2><p>${x[2]}</p></article>`).join('')}</div><p class="caption">备案核验、评论正文、跨平台对照均未完成，本轮暂缓，不补写对应结论。</p>`;
+case 'recap':return a.map(x=>`<div class="recapline"><span>${x[0]}</span>${x[1]}</div>`).join('');
+case 'end':return `<div class="three">${a.map(x=>`<div class="option"><b>${x[0]}</b>${x[1]}</div>`).join('')}</div>`;
+}}
+$('#slides').innerHTML=DATA.slides.map((s,i)=>`<section class="slide ${s.kind} ${['cover','end'].includes(s.kind)?'dark':''}" id="page-${i+1}" aria-label="第${i+1}页，共14页"><span class="tag">${esc(s.tag)}</span><h1>${esc(s.title)}</h1><p class="sub">${esc(s.sub)}</p><div class="content">${body(s)}</div><details class="notes"><summary>讲者提示与节奏</summary><p>${esc(s.notes)}</p></details><footer class="foot"><span>${esc(s.source)}</span><span>${String(i+1).padStart(2,'0')} / 14</span></footer></section>`).join('');
+let idx=0,presenting=false;const slides=[...document.querySelectorAll('.slide')];
+function update(){slides.forEach((s,i)=>s.classList.toggle('active',i===idx));$('#counter').textContent=`${idx+1} / 14`;$('.progress').setAttribute('aria-valuenow',idx+1);$('.progress span').style.width=`${(idx+1)/14*100}%`;$('#prev').disabled=idx===0;$('#next').disabled=idx===13;}
+function go(n){idx=Math.max(0,Math.min(13,n));update();if(!presenting)slides[idx].scrollIntoView({block:'start'});}
+$('#prev').onclick=()=>go(idx-1);$('#next').onclick=()=>go(idx+1);$('#print').onclick=()=>window.print();
+function endShow(){presenting=false;document.body.classList.remove('presenting');$('#show').textContent='全屏演示';update();slides[idx].scrollIntoView({block:'start'});}
+$('#show').onclick=async()=>{if(presenting){if(document.fullscreenElement)await document.exitFullscreen();endShow();return}presenting=true;document.body.classList.add('presenting');$('#show').textContent='退出演示';update();try{if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){/*全屏受限时仍保留单页演示*/}};
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&presenting)endShow()});
+document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT','BUTTON','SUMMARY'].includes(e.target.tagName))return;if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();go(idx+1)}if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(idx-1)}if(e.key==='Home'){e.preventDefault();go(0)}if(e.key==='End'){e.preventDefault();go(13)}if(e.key==='Escape'&&presenting)endShow()});
+const obs=new IntersectionObserver(es=>{if(presenting)return;let best=es.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(best){idx=slides.indexOf(best.target);update()}},{threshold:[.25,.5,.75]});slides.forEach(s=>obs.observe(s));update();
+</script></body></html>'''
+(HERE/'index.html').write_text(HTML_HEAD+JS.replace('__DATA__',json.dumps(D,ensure_ascii=False).replace('</','<\\/')),encoding='utf-8')
+# Reopen and validate OOXML structure and editability. This is not a visual inspection.
+R=Presentation(HERE/'分享展示.pptx')
+assert len(R.slides)==14
+shape_count=0
+for sl in R.slides:
+    assert sl.has_notes_slide and len(sl.notes_slide.notes_text_frame.text)>50
+    assert all(sh.shape_type!=13 for sh in sl.shapes)
+    for sh in sl.shapes:
+        assert sh.left>=0 and sh.top>=0
+        assert sh.left+sh.width<=R.slide_width+Inches(.02)
+        assert sh.top+sh.height<=R.slide_height+Inches(.02)
+        shape_count+=1
+with zipfile.ZipFile(HERE/'分享展示.pptx') as z:
+    assert len([x for x in z.namelist() if x.startswith('ppt/notesSlides/notesSlide') and x.endswith('.xml')])==14
+report={'slides':14,'native_shapes':shape_count,'full_slide_images':0,'notes_slides':14,'csv_rows':len(rows),'unique_product_ids':len({r['product_id'] for r in rows}),'csv_json_crosscheck':'passed','expected_lt5':D['expected_lt5'],'min_expected':D['min_expected'],'offline_html':True,'browser_visual_check':'not run; lead responsible','office_visual_check':'not run; lead responsible'}
+(HERE/'validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+print(json.dumps(report,ensure_ascii=False,indent=2))
